@@ -1,9 +1,33 @@
 #!/usr/bin/env python
 
 import tensorflow as tf
+from tensorflow.python.platform import gfile
+import numpy as np
 
 graph_file = './output_graph.pb'
-label_file = './label_file'
+label_file = './output_labels.txt'
+labels = gfile.FastGFile(label_file).read().splitlines()
 
-def predict(img):
-    return ''
+class Predictor():
+    def __init__(self, inp, oup):
+        self.input = inp
+        self.output = oup
+
+def initialize():
+    with gfile.FastGFile(graph_file, 'rb') as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+    inp, oup = tf.import_graph_def(graph_def,
+            return_elements=[
+                'DecodeJpeg/contents:0',
+                'final_result:0'])
+    return Predictor(inp, oup)
+
+def predict(img, pred):
+    img_ = gfile.FastGFile(img, 'rb').read()
+    with tf.Session():
+        result = pred.output.eval(feed_dict={pred.input: img_})
+    return labels[np.argmax(result)]
+
+pred = initialize()
+print(predict('../data/jpeg_dataset/back/2d644ef3f2f64e229c7b224bf7f14d1c.png.jpg',pred))
