@@ -101,6 +101,7 @@ class Presenter():
             cv2.imshow(self.imghex, img)
             ret = cv2.waitKey(1) & 0xff
             if ret == ord('q'):
+                cv2.destroyWindow(self.imghex)
                 break
             elif ret == ord('s'):
                 self._save_images()
