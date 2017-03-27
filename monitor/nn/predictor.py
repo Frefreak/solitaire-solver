@@ -30,4 +30,4 @@ def predict(img, pred):
     return labels[np.argmax(result)]
 
 pred = initialize()
-print(predict('../data/jpeg_dataset/back/2d644ef3f2f64e229c7b224bf7f14d1c.png.jpg',pred))
+print(predict('../data/jpeg_dataset/None/094ed1d0968b4987b9eaaa483a9533bf.png.jpg',pred))

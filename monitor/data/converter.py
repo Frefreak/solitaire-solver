@@ -18,7 +18,7 @@ label_file = './label_list.txt'
 dataset_dir = './dataset'
 batch_size = 30
 
-labels = util.read_labels(label_file) + ['None']
+labels = util.read_labels(label_file) + ['none']
 for l in labels:
     os.makedirs(os.path.join(dataset_dir, l), exist_ok=True)
 labels = [''] + labels
