@@ -3,6 +3,10 @@
 import tensorflow as tf
 from tensorflow.python.platform import gfile
 import numpy as np
+import glob
+import os
+
+import time
 
 graph_file = './output_graph.pb'
 label_file = './output_labels.txt'
