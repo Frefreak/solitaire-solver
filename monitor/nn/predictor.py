@@ -1,37 +1,36 @@
 #!/usr/bin/env python
 
-import tensorflow as tf
-from tensorflow.python.platform import gfile
-import numpy as np
-import glob
 import os
+from keras.models import load_model
+import cv2
 
-import time
+model_file = './final_model.h5'
+labels = open('../data/label_list.txt', 'r').read().splitlines() + ['none']
 
-graph_file = './output_graph.pb'
-label_file = './output_labels.txt'
-labels = gfile.FastGFile(label_file).read().splitlines()
+def load_img(fn):
+    img = cv2.imread(fn)
+    img = cv2.resize(img, (24, 24))
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = img.reshape((-1, 24, 24, 3))
+    img = img / 255.
+    return img
 
-class Predictor():
-    def __init__(self, inp, oup):
-        self.input = inp
-        self.output = oup
-
-def initialize():
-    with gfile.FastGFile(graph_file, 'rb') as f:
-        graph_def = tf.GraphDef()
-        graph_def.ParseFromString(f.read())
-    inp, oup = tf.import_graph_def(graph_def,
-            return_elements=[
-                'DecodeJpeg/contents:0',
-                'final_result:0'])
-    return Predictor(inp, oup)
-
-def predict(img, pred):
-    img_ = gfile.FastGFile(img, 'rb').read()
-    with tf.Session():
-        result = pred.output.eval(feed_dict={pred.input: img_})
-    return labels[np.argmax(result)]
-
-pred = initialize()
-print(predict('../data/jpeg_dataset/None/094ed1d0968b4987b9eaaa483a9533bf.png.jpg',pred))
+model = load_model(model_file)
+tot = 0
+wrong = 0
+img_dir = './train_data'
+for f in os.listdir(img_dir):
+    l = f.split('/')[-1]
+    ldir = os.path.join(img_dir, f)
+    for png in os.listdir(ldir):
+        if png == '.directory':
+            continue
+        img = load_img(os.path.join(ldir, png))
+        l_p = labels[model.predict_classes(img)[0]]
+        tot += 1
+        if l != l_p:
+            wrong += 1
+            print(os.path.join(f, png), l, l_p)
+print(tot)
+print(wrong)
+print(1-(wrong/tot))
