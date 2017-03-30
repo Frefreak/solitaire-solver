@@ -17,8 +17,13 @@ library
   hs-source-dirs:      src
   exposed-modules:     Types
                      , Solver
+                     , Parser
   build-depends:       base >= 4.7 && < 5
                      , lens
+                     , bytestring
+                     , http-client
+                     , lens-aeson
+                     , text
   default-language:    Haskell2010
 
 executable solitaire-solver-exe

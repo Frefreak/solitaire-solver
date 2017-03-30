@@ -13,9 +13,9 @@ botleft1_2 = (122, 321)
 botleft2_1 = (274, 290)
 hua = (689, 26)
 
-model_file = './final_model.h5'
+model_file = 'nn/final_model.h5'
 model = load_model(model_file)
-labels = open('../data/label_list.txt', 'r').read().splitlines() + \
+labels = open('./data/label_list.txt', 'r').read().splitlines() + \
             ['none']
 labels = np.array(labels)
 
@@ -38,6 +38,8 @@ def load_image(im):
         img = np.asarray(img.convert('RGB')) / 255.
     elif isinstance(im, np.ndarray):
         img = im
+    elif callable(im):
+        img = im()
     else:
         raise ValueError("must be image path or numpy's ndarray")
     return img
@@ -80,5 +82,3 @@ def read(im):
             co = [co[0], co[1] + v_offset]
 
     return result
-
-r = read('./wvxnki9nwfxhKrtlGFynmdvfuHmPthrl.png')
