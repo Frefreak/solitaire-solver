@@ -18,7 +18,7 @@ def load_img(fn):
 model = load_model(model_file)
 tot = 0
 wrong = 0
-img_dir = './test_data'
+img_dir = './train_data'
 for f in os.listdir(img_dir):
     l = f.split('/')[-1]
     ldir = os.path.join(img_dir, f)
@@ -26,7 +26,7 @@ for f in os.listdir(img_dir):
         if png == '.directory':
             continue
         img = load_img(os.path.join(ldir, png))
-        l_p = labels[model.predict_classes(img)[0]]
+        l_p = labels[model.predict_classes(img, verbose=0)[0]]
         tot += 1
         if l != l_p:
             wrong += 1
