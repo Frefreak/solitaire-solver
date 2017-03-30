@@ -9,6 +9,7 @@ import Control.Monad
 import Control.Monad.State
 import Control.Lens
 import qualified Data.Set as S
+import qualified Data.Sequence as Sq
 import Data.Maybe
 import Data.List (foldl')
 
@@ -23,25 +24,35 @@ data Operation = Move Position Position | Hit Card
 
 allPossibleMoves :: Board -> [(Board, Operation)]
 allPossibleMoves bd =
-    let am = allMoveable bd
-        moveOps = concatMap (\s@(p, i) -> let pos = reachableFrom bd s
-                                in map (modifyBoard bd p &&& Move p) pos) am
-        hitOps = canHit bd
-    in hitOps ++ moveOps
+    let hitOps = canHit bd
+    in if not (null hitOps)
+         then hitOps
+         else
+            let am = allMoveable bd
+            in concatMap (\s@(p, i) -> let pos = reachableFrom bd s
+                        in map (modifyBoard bd p &&& Move p) pos) am
 
 canHit :: Board -> [(Board, Operation)]
 canHit bd
     | length (searchSurface bd Zhong) == 4 &&
-        (any ((== Zhong) . snd) (getTopLeft bd) || length (getTopLeft bd) < 3) =
+        (any ((== Zhong) . snd) (getTopLeft bd) || tlNonEmpty bd < 3) =
         [(hitOpt bd (searchSurface bd Zhong), Hit Zhong)]
     | length (searchSurface bd Fa) == 4 &&
-        (any ((== Fa) . snd) (getTopLeft bd) || length (getTopLeft bd) < 3) =
+        (any ((== Fa) . snd) (getTopLeft bd) || tlNonEmpty bd < 3) =
         [(hitOpt bd (searchSurface bd Fa), Hit Fa)]
     | length (searchSurface bd Bai) == 4 &&
-        (any ((== Bai) . snd) (getTopLeft bd) || length (getTopLeft bd) < 3) =
+        (any ((== Bai) . snd) (getTopLeft bd) || tlNonEmpty bd < 3) =
         [(hitOpt bd (searchSurface bd Bai), Hit Bai)]
     | otherwise = []
 
+tlNonEmpty :: Board -> Int
+tlNonEmpty bd =
+    let (x, y, z) = topleft bd
+        res = [x, y, z]
+        f TLEmpty = False
+        f _ = True
+        fromsingle (TLSingleton c) = c
+    in length $ filter f res
 
 getTopLeft :: Board -> [(Int, Card)]
 getTopLeft bd =
@@ -78,22 +89,23 @@ allMoveable :: Board -> [(Position, Int)]
 allMoveable b = moveableTL ++ moveableMain b where
     moveableTL = map ((, 1) . PTL . snd) $ filter fst $
                     zip (map tlMoveable (topleft' b)) [0..]
-    topleft' b' = let (a, b, c) = topleft b' in [a, b, c]
+    topleft' b' = let (x, y, z) = topleft b' in [x, y, z]
     tlMoveable (TLSingleton _) = True
     tlMoveable _ = False
 
 moveableMain :: Board -> [(Position, Int)]
 moveableMain (Board _ _ _ mainstack) = concatMap helper $ zip mainstack [0..]
-    where
-        helper (cards, i) = map (first $ PMain i) $ moveableM cards
-        moveableM :: [Card] -> [(Int, Int)]
-        moveableM cs = if null cs then [] else
-            (length cs - 1, 1) : remains cs where
-            remains cs = let l = length $ filter canCombine $
-                                    zip (reverse cs) (tail $ reverse cs)
-                        in zip [length cs - 2, length cs - 3..] [2..l + 1]
-            canCombine (c1, c2) = not (isSameType c1 c2) &&
-                cardNumber c1 + 1 == cardNumber c2
+    where helper (cards, i) = map (first $ PMain i) $ moveableM cards
+
+moveableM :: [Card] -> [(Int, Int)]
+moveableM cs = if null cs then [] else
+    (length cs - 1, 1) : remains cs where
+    remains cs = let l = length $ helper $ zip (reverse cs) (tail $ reverse cs)
+                in zip [length cs - 2, length cs - 3..] [2..l + 1]
+    helper [] = []
+    helper (t:ts) = if canCombine t then t: helper ts else []
+    canCombine (c1, c2) = not (isSameType c1 c2) &&
+        cardNumber c1 + 1 == cardNumber c2
 
 isSameType :: Card -> Card -> Bool
 isSameType (Wan _) (Wan _) = True
@@ -117,11 +129,7 @@ reachableFrom b (p, i) =
         Fa -> moveableZFB b
         Bai -> moveableZFB b
         -- normal card
-        nc -> let emptySlots = moveableZFB b
-                  validEmpty = if i == 1
-                                 then emptySlots
-                                 else filter (not . isPTL) emptySlots
-                  validTopRight
+        nc -> let validTopRight
                     | i /= 1 = []
                     | nc == Wan 1 || nc == Tong 1 || nc == Tiao 1 = [firstEmptyTR b]
                     | otherwise =
@@ -131,14 +139,21 @@ reachableFrom b (p, i) =
                                 zip [tr1', tr2', tr3'] [0..]
                         in map (PTR . snd) $ filter (\(t, po) -> isSameType t c &&
                                     cardNumber t + 1 == cardNumber c) trlist
-                  validMainS = filter (\(cards, (n, la)) ->
-                        null cards ||
-                            let f = last cards
-                            in not (isSameType c f) &&
-                                cardNumber c + 1 == cardNumber f) $
-                                zip (pile b) $ zip [0..] (map length $ pile b)
-                  validMain = map (\(_, (n, la)) -> PMain n (la - 1)) validMainS
-              in validEmpty ++ validTopRight ++ validMain
+              in if not (null validTopRight)
+                then validTopRight
+                else
+                  let emptySlots = moveableZFB b
+                      validEmpty = if i == 1
+                                     then emptySlots
+                                     else filter (not . isPTL) emptySlots
+                      validMainS = filter (\(cards, (n, la)) ->
+                            null cards ||
+                                let f = last cards
+                                in not (isSameType c f) &&
+                                    cardNumber c + 1 == cardNumber f) $
+                                    zip (pile b) $ zip [0..] (map length $ pile b)
+                      validMain = map (\(_, (n, la)) -> PMain n la) validMainS
+                  in validEmpty ++ validMain
 
 firstEmptyTL :: Board -> Position
 firstEmptyTL bd = let (a, b, c) = topleft bd
@@ -148,7 +163,7 @@ firstEmptyTL bd = let (a, b, c) = topleft bd
                 then PTL 1
                 else if c == TLEmpty
                        then PTL 2
-                       else error "impossible"
+                       else error $ show bd -- "impossible"
 
 firstEmptyTR :: Board -> Position
 firstEmptyTR bd = let (a, b, c) = topright bd
@@ -185,7 +200,8 @@ getCardFromPos bd (PTL i) = let (a, b, c) = topleft bd
 getCardFromPos bd (PMain i j) = pile bd !! i !! j
 
 modifyBoard :: Board -> Position -> Position -> Board
-modifyBoard bd (PTL i) (PTL j) = bd -- useless move, so we don't move
+modifyBoard bd (PTL i) (PTL j) = bd & topleftL . ix i .~ TLEmpty
+    & topleftL . ix j .~ TLSingleton (getCardFromPos bd (PTL i))
 modifyBoard bd (PTL i) (PMain x y) = bd & topleftL . ix i .~ TLEmpty
     & pileL . ix x .~ (bd ^. pileL . ix x ++ [getCardFromPos bd (PTL i)])
 modifyBoard bd (PTL i) PHua = error "impossible"
@@ -211,25 +227,19 @@ modifyBoard bd (PMain a b) (PMain x y) =
     in bd & pileL . ix a .~ take b ori
           & pileL . ix x .~ ori2 ++ drop b ori
 
-try :: Board -> State (S.Set Board) Bool
-try bd =
-    if isFinished bd
-      then return True
-      else do
-        vis <- get
-        let bds = map fst $ allPossibleMoves bd
-            bds' = filter (not . (`S.member` vis)) bds
-        if null bds'
-          then return False
-          else do
-            let vis' = S.union vis $ S.fromList bds
-            put vis'
-            a <- mapM try bds'
-            return $ or a
+dfs :: S.Set Board -> Board -> Bool
+dfs vis bd =
+    isFinished bd ||
+        let allboards = map fst $ allPossibleMoves bd
+            newboards = filter (not . (`S.member` vis)) allboards
+            vis' = S.insert bd vis
+        in not (null newboards) &&
+            any (dfs vis') newboards
 
 finished :: Board
-finished = Board (TLEmpty, TLEmpty, TLEmpty) HSSingleton (TREmpty, TREmpty, TREmpty)
-    [[Wan 9, Wan 8, Wan 7, Wan 6, Wan 5, Wan 4, Wan 3, Wan 2, Wan 1],
-    [Tiao 9, Tiao 8, Tiao 7, Tiao 6, Tiao 5, Tiao 4, Tiao 3, Tiao 2, Tiao 1],
-    [Tong 9, Tong 8, Tong 7, Tong 6, Tong 5, Tong 4, Tong 3, Tong 2, Tong 1],
-    [Zhong, Fa, Bai], [Zhong, Fa, Bai], [Zhong, Fa, Bai], [Zhong, Fa, Bai], []]
+finished = Board (TLFull, TLFull, TLFull) HSEmpty (TREmpty, TREmpty, TREmpty)
+    [[],
+    [Tiao 9, Tiao 8, Tiao 7, Tiao 6, Tiao 5, Wan 4, Tiao 3, Tiao 2, Tiao 1],
+    [Tong 9, Tong 8, Tong 7, Tong 6, Tong 5, Tong 4, Hua, Tong 3, Tong 2, Tong 1],
+    [Wan 9, Wan 8, Wan 7, Wan 6, Wan 5, Tiao 4, Wan 3, Wan 2, Wan 1],
+    [], [], [], []]
