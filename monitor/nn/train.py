@@ -20,7 +20,7 @@ model.add(Conv2D(64, (3, 3), strides=1, padding='same', \
 model.add(Conv2D(128, (3, 3), strides=1, padding='same', \
                 activation='relu', input_shape=(img_size, img_size, 3)))
 model.add(MaxPooling2D())
-model.add(Dropout(0.25))
+model.add(Dropout(0.22))
 
 model.add(Flatten())
 model.add(Dense(512, activation='relu'))
@@ -35,14 +35,14 @@ train_generator = ImageDataGenerator(rotation_range=22, \
         width_shift_range=0.21, height_shift_range=0.21, rescale=1./255)
 test_generator = ImageDataGenerator(rescale=1./255)
 train_gen = train_generator.flow_from_directory(train_dir, \
-        target_size=(img_size, img_size), classes=labels)
+        target_size=(img_size, img_size), classes=labels, batch_size=64)
 test_gen = test_generator.flow_from_directory(test_dir, \
         target_size=(img_size, img_size), classes=labels)
 
 model.fit_generator( \
         train_gen, \
         steps_per_epoch=500, \
-        epochs=40, \
+        epochs=35, \
         validation_data=test_gen, \
         validation_steps=500)
 

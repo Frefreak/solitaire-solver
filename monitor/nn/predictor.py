@@ -18,7 +18,7 @@ def load_img(fn):
 model = load_model(model_file)
 tot = 0
 wrong = 0
-img_dir = './train_data'
+img_dir = './test_data'
 for f in os.listdir(img_dir):
     l = f.split('/')[-1]
     ldir = os.path.join(img_dir, f)
