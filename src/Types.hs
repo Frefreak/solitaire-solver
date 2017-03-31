@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Types (
     Card(..)
   , TopLeftSlot(..)
@@ -13,6 +14,8 @@ module Types (
   , huaslotL
   ) where
 import Control.Lens
+import GHC.Generics (Generic)
+import Data.Hashable
 
 data Card where
     Zhong :: Card
@@ -22,28 +25,33 @@ data Card where
     Wan :: Int -> Card
     Tong :: Int -> Card
     Tiao :: Int -> Card
-    deriving (Show, Eq, Ord)
+    deriving (Show, Eq, Ord, Generic)
+instance Hashable Card
 
 data TopLeftSlot where
     TLEmpty :: TopLeftSlot
     TLSingleton :: Card -> TopLeftSlot
     TLFull :: TopLeftSlot
-    deriving (Show, Eq, Ord)
+    deriving (Show, Eq, Ord, Generic)
+instance Hashable TopLeftSlot
 
 data HuaSlot = HSEmpty | HSSingleton
-    deriving (Show, Eq, Ord)
+    deriving (Show, Eq, Ord, Generic)
+instance Hashable HuaSlot
 
 data TopRightSlot where
     TREmpty :: TopRightSlot
     TRTaken :: Card -> TopRightSlot
-    deriving (Show, Eq, Ord)
+    deriving (Show, Eq, Ord, Generic)
+instance Hashable TopRightSlot
 
 data Board = Board {
     topleft :: (TopLeftSlot, TopLeftSlot, TopLeftSlot)
   , huaslot :: HuaSlot
   , topright :: (TopRightSlot, TopRightSlot, TopRightSlot)
   , pile :: [[Card]]
-  } deriving (Show, Eq, Ord)
+  } deriving (Show, Eq, Ord, Generic)
+instance Hashable Board
 
 makeLensesFor [("topleft", "topleftL")
                ,("huaslot", "huaslotL")

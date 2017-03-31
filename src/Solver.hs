@@ -8,7 +8,7 @@ import Control.Arrow
 import Control.Monad
 import Control.Monad.State
 import Control.Lens
-import qualified Data.Set as S
+import qualified Data.HashSet as S
 import qualified Data.Sequence as Sq
 import Data.Maybe
 import Data.List (foldl')
@@ -125,9 +125,12 @@ reachableFrom b (p, i) =
     in case c of
         Hua -> [PHua] -- if Hua is moveable, it must be on the surface and should
                       -- only be moved to Hua slot
-        Zhong -> moveableZFB b
-        Fa -> moveableZFB b
-        Bai -> moveableZFB b
+        {- Zhong -> if isPTL p then filter (not . isPTL) $ allEmptySlots b -}
+                            {- else allEmptySlots b -}
+        {- Fa -> if isPTL p then filter (not . isPTL) $ allEmptySlots b -}
+                            {- else allEmptySlots b -}
+        {- Bai -> if isPTL p then filter (not . isPTL) $ allEmptySlots b -}
+                            {- else allEmptySlots b -}
         -- normal card
         nc -> let validTopRight
                     | i /= 1 = []
@@ -142,10 +145,16 @@ reachableFrom b (p, i) =
               in if not (null validTopRight)
                 then validTopRight
                 else
-                  let emptySlots = moveableZFB b
-                      validEmpty = if i == 1
-                                     then emptySlots
-                                     else filter (not . isPTL) emptySlots
+                  let emptySlots = allEmptySlots b
+                      mainempty = filter (not . isPTL) emptySlots
+                      mainempty' = if null mainempty then []
+                                                     else [head mainempty]
+                      tlempty = filter isPTL emptySlots
+                      tlempty' = if null tlempty then []
+                                                 else [head tlempty]
+                      validEmpty = if i == 1 && not (isPTL p)
+                                     then tlempty' ++ mainempty'
+                                     else mainempty'
                       validMainS = filter (\(cards, (n, la)) ->
                             null cards ||
                                 let f = last cards
@@ -153,7 +162,7 @@ reachableFrom b (p, i) =
                                     cardNumber c + 1 == cardNumber f) $
                                     zip (pile b) $ zip [0..] (map length $ pile b)
                       validMain = map (\(_, (n, la)) -> PMain n la) validMainS
-                  in validEmpty ++ validMain
+                  in validMain ++ validEmpty
 
 firstEmptyTL :: Board -> Position
 firstEmptyTL bd = let (a, b, c) = topleft bd
@@ -183,8 +192,8 @@ topRightConv :: TopRightSlot -> Maybe Card
 topRightConv TREmpty = Nothing
 topRightConv (TRTaken c) = Just c
 
-moveableZFB :: Board -> [Position]
-moveableZFB bd =
+allEmptySlots :: Board -> [Position]
+allEmptySlots bd =
     let (a, b, c) = topleft bd
         part1 = map (PTL . snd) $ filter ((== TLEmpty) . fst) $ zip [a, b, c] [0..]
         mainstack = pile bd
@@ -227,14 +236,67 @@ modifyBoard bd (PMain a b) (PMain x y) =
     in bd & pileL . ix a .~ take b ori
           & pileL . ix x .~ ori2 ++ drop b ori
 
-dfs :: S.Set Board -> Board -> Bool
+dfs :: S.HashSet Board -> Board -> ([Operation], Bool)
 dfs vis bd =
-    isFinished bd ||
-        let allboards = map fst $ allPossibleMoves bd
-            newboards = filter (not . (`S.member` vis)) allboards
+    if isFinished bd
+      then ([], True)
+      else
+        let allboards = allPossibleMoves bd
+            newboards = filter (not . (`S.member` vis) . fst) allboards
             vis' = S.insert bd vis
-        in not (null newboards) &&
-            any (dfs vis') newboards
+        in if null newboards
+             then ([], False)
+             else let allresult = map (\(b, op) -> let r = dfs vis' b
+                                    in if snd r
+                                        then (op : fst r, True)
+                                        else ([], False)) newboards
+                      good = filter snd allresult
+                  in if null good
+                       then ([], False)
+                       else head good
+
+type St = (S.HashSet Board, Sq.Seq Board)
+
+queueEmpty :: State St Bool
+queueEmpty = null . snd <$> get
+
+popQueue :: State St Board
+popQueue = do
+    a Sq.:< q' <- Sq.viewl . snd <$> get
+    modify (\(m, _) -> (m, q'))
+    return a
+
+pushQueue :: Board -> State St ()
+pushQueue v = modify (\(m, q) -> (m, q Sq.|> v))
+
+isVisited :: Board -> State St Bool
+isVisited b = do
+    s <- fst <$> get
+    return $ S.member b s
+
+markVisited :: Board -> State St ()
+markVisited v = modify (first $ S.insert v)
+
+bfs' :: State St Bool
+bfs' = do
+    em <- queueEmpty
+    if em
+      then return False
+      else do
+        b <- popQueue
+        if isFinished b
+          then return True
+          else do
+            let allboards = map fst $ allPossibleMoves b
+            forM_ allboards $ \d -> do
+               visited <- isVisited d
+               unless visited $ do
+                   pushQueue d
+                   markVisited d
+            bfs'
+
+bfs :: Board -> Bool
+bfs bd = evalState bfs' (S.singleton bd, Sq.singleton bd)
 
 finished :: Board
 finished = Board (TLFull, TLFull, TLFull) HSEmpty (TREmpty, TREmpty, TREmpty)

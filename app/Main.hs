@@ -2,7 +2,8 @@ module Main where
 
 import Solver
 import Parser
-import qualified Data.Set as S
+import qualified Data.HashSet as S
 
 main :: IO ()
-main = getBoard >>= print . dfs S.empty
+{- main = print $ dfs S.empty finished -}
+main = getBoard >>= print . bfs
