@@ -7,7 +7,8 @@ from PIL import Image
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 boxsize = 24
-topleft = (122, 26)
+#  topleft = (122, 26)
+topleft = (122, 22)
 botleft1_1 = (122, 290)
 botleft1_2 = (122, 321)
 botleft2_1 = (274, 290)

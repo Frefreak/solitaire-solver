@@ -8,14 +8,18 @@ module Types (
   , TopRightSlot(..)
   , Board(..)
   , Position(..)
+  , Operation(..)
+  , InvalidBoard(..)
   , topleftL
   , pileL
   , toprightL
   , huaslotL
   ) where
-import Control.Lens
+import Control.Lens (makeLensesFor)
 import GHC.Generics (Generic)
 import Data.Hashable
+import Data.Function (on)
+import Control.Exception
 
 data Card where
     Zhong :: Card
@@ -25,8 +29,21 @@ data Card where
     Wan :: Int -> Card
     Tong :: Int -> Card
     Tiao :: Int -> Card
-    deriving (Show, Eq, Ord, Generic)
+    deriving (Show, Eq, Generic)
 instance Hashable Card
+
+-- priority
+rankCard :: Card -> Int
+rankCard Hua = 0
+rankCard (Wan n) = n
+rankCard (Tong n) = n
+rankCard (Tiao n) = n
+rankCard Zhong = 0
+rankCard Fa = 0
+rankCard Bai = 0
+
+instance Ord Card where
+    compare = compare `on` rankCard
 
 data TopLeftSlot where
     TLEmpty :: TopLeftSlot
@@ -65,3 +82,11 @@ data Position where
     PHua :: Position -- hua position
     PTR :: Int -> Position -- top right
     deriving Show
+
+data Operation = Move Position Position | Slay Card
+    deriving Show
+
+newtype InvalidBoard = InvalidBoard String
+    deriving Show
+
+instance Exception InvalidBoard

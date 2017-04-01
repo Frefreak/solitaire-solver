@@ -6,10 +6,10 @@ from pyscreenshot import grab
 from werkzeug.wrappers import Request, Response
 import numpy as np
 
-development = True
+development = False # False
 
 if development:
-    img = './nn/TR9CeuUHl0O4421TgvdxFX9kTC5NnB4e.png'
+    img = './nn/WwIVVtKbRfe5IsjsTZRppnFm9awgjs45.png'
 else:
     def callback():
         return np.array(grab()) / 255.

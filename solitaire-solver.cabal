@@ -18,6 +18,8 @@ library
   exposed-modules:     Types
                      , Solver
                      , Parser
+                     , Pretty
+                     , Performer
   build-depends:       base >= 4.7 && < 5
                      , lens
                      , bytestring
@@ -28,6 +30,7 @@ library
                      , containers
                      , unordered-containers
                      , hashable
+                     , process
   default-language:    Haskell2010
 
 executable solitaire-solver-exe

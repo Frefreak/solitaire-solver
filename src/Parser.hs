@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE Strict #-}
 module Parser (
     getBoard
   ) where
@@ -10,6 +11,7 @@ import qualified Data.Text as T
 import Network.HTTP.Client
 import Data.Aeson.Lens
 import Control.Lens.Operators
+import Control.Exception (throw, evaluate)
 
 getBoardJson :: IO LBS.ByteString
 getBoardJson = do
@@ -43,7 +45,7 @@ topleftConv t = TLSingleton $ parseCard t
 huaConv :: T.Text -> HuaSlot
 huaConv "empty" = HSEmpty
 huaConv "hua" = HSSingleton
-huaConv _ = error "server returned impossible value"
+huaConv _ = throw $ InvalidBoard "server returned impossible value"
 
 toprightConv :: T.Text -> TopRightSlot
 toprightConv "empty" = TREmpty
@@ -58,7 +60,7 @@ parseCard s = helper (T.tail s) (read [T.head s]) where
     helper "wan" = Wan
     helper "tong" = Tong
     helper "tiao" = Tiao
-    helper _ = error "server returned impossible value"
+    helper _ = throw $ InvalidBoard "server returned impossible value"
 
 getBoard :: IO Board
-getBoard = parse <$> getBoardJson
+getBoard = (parse <$> getBoardJson) >>= evaluate
