@@ -67,34 +67,45 @@ coord (PTR i) =
 coord PHua = chua
 
 performOperation :: Operation -> IO ()
+{- performOperation (Move p1 (PTR i)) = do -}
+    {- let (cx, cy) = coord p1 -}
+    {- mousemove'' (cx, min (cy + 210) 690) -}
+    {- threadDelay 150000 -}
+    {- mousedown -}
+    {- threadDelay 150000 -}
+    {- let (dx, dy) = coord (PTR i) -}
+    {- mousemove'' (dx, dy + 210) -}
+    {- threadDelay 150000 -}
+    {- mouseup -}
+    {- threadDelay 100000 -}
 performOperation (Move p1 p2) = do
     mousemove'' (coord p1)
-    threadDelay 200000
+    threadDelay 150000
     mousedown
-    threadDelay 200000
+    threadDelay 150000
     mousemove'' (coord p2)
-    threadDelay 200000
+    threadDelay 150000
     mouseup
     threadDelay 200000
 performOperation (Slay Zhong) = do
     mousemove'' czhong
-    threadDelay 400000
-    mousedown
     threadDelay 200000
+    mousedown
+    threadDelay 100000
     mouseup
     threadDelay 1000000
 performOperation (Slay Fa) = do
     mousemove'' cfa
-    threadDelay 400000
-    mousedown
     threadDelay 200000
+    mousedown
+    threadDelay 100000
     mouseup
     threadDelay 1000000
 performOperation (Slay Bai) = do
     mousemove'' cbai
-    threadDelay 400000
-    mousedown
     threadDelay 200000
+    mousedown
+    threadDelay 100000
     mouseup
     threadDelay 1000000
 

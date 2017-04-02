@@ -10,19 +10,23 @@ import Control.Monad
 import Control.Exception
 import System.Timeout
 
-performOperations :: [Operation] -> IO [Operation]
-performOperations [] = return []
+performOperations :: [Operation] -> IO ()
+performOperations [] = return ()
 performOperations (Move _ PHua:ops) = performOperations ops
-performOperations op@(Move _ (PTR _):ops) = do
-    print (head op)
-    mousemove'' (0, 0) -- don't block
-    let seriesPTR = length $ takeWhile isMoveToPTR ops
-    threadDelay $ 300000 * (seriesPTR + 1)
-    return op
+{- performOperations op@(Move _ (PTR _):ops) = do -}
+    {- print (head op) -}
+    {- mousemove'' (0, 0) -- don't block -}
+    {- let seriesPTR = length $ takeWhile isMoveToPTR ops -}
+    {- threadDelay $ 300000 * (seriesPTR + 1) -}
+    {- return op -}
 performOperations (op:ops) = do
     print op
     performOperation op
-    performOperations ops
+    if all isMoveToPTR ops --  this sometimes will fail
+      then do
+        performOperation (head ops)
+        threadDelay $ 350000 * length ops
+      else performOperations ops
 
 main :: IO ()
 main = do
@@ -61,14 +65,14 @@ perform b = do
     case r of
         Nothing -> startNewGame
         Just [] -> return ()
-        Just allop@(op:op_) -> do
-            print op
-            if all isMoveToPTR allop
-              then threadDelay 5000000 >> startNewGame
-              else do
-                performOperation op
-                r <- performOperations op_
-                unless (null r) main'
+        Just ops -> performOperations ops
+            {- print op -}
+            {- if all isMoveToPTR allop -}
+              {- then threadDelay 5000000 >> startNewGame -}
+              {- else do -}
+                {- performOperation op -}
+                {- r <- performOperations op_ -}
+                {- unless (null r) main' -}
 
 finishedBoard :: Board
 finishedBoard = Board (TLFull, TLFull, TLFull) HSSingleton
