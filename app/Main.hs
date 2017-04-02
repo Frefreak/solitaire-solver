@@ -17,7 +17,7 @@ performOperations op@(Move _ (PTR _):ops) = do
     print (head op)
     mousemove'' (0, 0) -- don't block
     let seriesPTR = length $ takeWhile isMoveToPTR ops
-    threadDelay $ 500000 * (seriesPTR + 1)
+    threadDelay $ 400000 * (seriesPTR + 1)
     return op
 performOperations (op:ops) = do
     print op
@@ -36,8 +36,8 @@ main' = do
     (b' :: Either SomeException Board) <- try getBoard
     case b' of
         Left err -> do
-            putStrLn "wait at most 3 more rounds"
-            getBoard' 3 >>= perform
+            putStrLn "wait 1 more rounds"
+            getBoard' 1 >>= perform
         Right b -> perform b
     startNewGame
 
@@ -45,7 +45,7 @@ startNewGame :: IO ()
 startNewGame = do
     mousemove'' (1220, 728)
     threadDelay 150000
-    mousedown 
+    mousedown
     threadDelay 150000
     mouseup
     threadDelay 5000000

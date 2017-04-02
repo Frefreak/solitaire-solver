@@ -263,7 +263,7 @@ modifyBoard b (Slay c) = let poss = searchSurface b c
     in slayOp b poss
 
 dfs :: Board -> [Operation]
-dfs b = fst $ evalState (dfs' b) S.empty
+dfs b = simplify b . fst $ evalState (dfs' b) S.empty
 
 dfs' :: Board -> State (S.HashSet Board) ([Operation], Bool)
 dfs' bd = do
@@ -319,5 +319,32 @@ bfs' q = case Sq.viewl q of
 bfs :: Board -> Bool
 bfs b = evalState (bfs' $ Sq.singleton b) S.empty
 
-test0 :: Board
-test0 = Board {topleft = (TLEmpty,TLEmpty,TLEmpty), huaslot = HSEmpty, topright = (TREmpty,TREmpty,TREmpty), pile = [[Tiao 1,Fa,Tiao 8,Fa,Wan 8],[Tiao 3,Wan 2,Zhong,Hua,Wan 9],[Tiao 9,Fa,Bai,Tiao 4,Tong 4],[Tiao 5,Tong 9,Wan 4,Bai,Tong 5],[Tong 8,Tong 2,Wan 7,Zhong,Wan 3],[Bai,Tiao 2,Wan 1,Bai,Fa],[Tong 3,Tiao 6,Tong 1,Wan 6,Zhong],[Zhong,Tong 7,Wan 5,Tong 6,Tiao 7]]}
+-- simplifier
+
+simplify :: Board -> [Operation] -> [Operation]
+simplify bd ops =
+    let allboard = scanl modifyBoard bd ops
+        allboard_e = zip allboard [0..]
+        possibleBoards = map allPossibleMoves allboard
+        helper (bds, op) idx = op
+        newops = simplify' allboard possibleBoards ops
+    in if length ops == length newops
+         then ops
+         else simplify bd newops
+
+simplify' :: [Board] -> [[(Board, Operation)]] -> [Operation] ->
+    [Operation]
+simplify' [] _ ops = ops
+simplify' _ [] ops = ops
+simplify' _ _ [] = []
+simplify' bds (bo:bos) ops =
+    let bds' = zip bds [0..]
+        sb = S.fromList $ map fst bo
+        r = map (first (`S.member` sb)) $ drop 2 bds'
+        rr = filter fst r
+    in if null rr
+         then head ops : simplify' (tail bds) bos (tail ops)
+         else let idx = snd . head $ rr
+                  pickb = bds !! idx
+                  Just newOp = lookup pickb bo
+                in newOp : drop idx ops
