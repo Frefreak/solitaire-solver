@@ -17,7 +17,7 @@ performOperations op@(Move _ (PTR _):ops) = do
     print (head op)
     mousemove'' (0, 0) -- don't block
     let seriesPTR = length $ takeWhile isMoveToPTR ops
-    threadDelay $ 400000 * (seriesPTR + 1)
+    threadDelay $ 300000 * (seriesPTR + 1)
     return op
 performOperations (op:ops) = do
     print op
