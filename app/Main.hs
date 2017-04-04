@@ -61,7 +61,7 @@ isMoveToPTR _ = False
 
 perform :: Board -> IO ()
 perform b = do
-    r <- timeout 20000000 (return $! dfs b)
+    r <- timeout 22000000 (return $! dfs b)
     case r of
         Nothing -> startNewGame
         Just [] -> return ()

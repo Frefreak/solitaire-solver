@@ -9,7 +9,7 @@ import numpy as np
 development = False # False
 
 if development:
-    img = './nn/WwIVVtKbRfe5IsjsTZRppnFm9awgjs45.png'
+    img = './nn/Wdd21x4hsWZ9qX6vSZY4OTQ57pRGNAbC.png'
 else:
     def callback():
         return np.array(grab()) / 255.

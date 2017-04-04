@@ -38,9 +38,9 @@ rankCard Hua = 0
 rankCard (Wan n) = n
 rankCard (Tong n) = n
 rankCard (Tiao n) = n
-rankCard Zhong = 1
-rankCard Fa = 1
-rankCard Bai = 1
+rankCard Zhong = 2
+rankCard Fa = 2
+rankCard Bai = 2
 
 instance Ord Card where
     compare = compare `on` rankCard

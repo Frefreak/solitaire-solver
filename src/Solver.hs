@@ -263,8 +263,10 @@ modifyBoard b (Slay c) = let poss = searchSurface b c
     in slayOp b poss
 
 dfs :: Board -> [Operation]
-dfs b = simplify b . fst $ evalState (dfs' b) S.empty
+dfs b = simplify3 b . simplify b . fst $
+    evalState (dfs' b) $ S.singleton b
 
+type St = State (S.HashSet Board)
 dfs' :: Board -> State (S.HashSet Board) ([Operation], Bool)
 dfs' bd = do
     vis <- get
@@ -273,15 +275,27 @@ dfs' bd = do
       else do
         let allboards = allPossibleMoves bd
             newboards = filter (not . (`S.member` vis) . fst) allboards
-        modify $ S.insert bd
+        mapM_ (modify . S.insert . fst) newboards
+        {- modify $ S.insert bd -}
         if null newboards
           then return ([], False)
           else do
-            r <- mapM (\(b, op) -> (, op) <$> dfs' b) newboards 
-            let goodOp = filter (snd . fst) r
+            let r = map (\(b, op) -> (, op) <$> dfs' b) newboards
+            goodOp <- findFirstGoodOp r
             if null goodOp
               then return ([], False)
-              else let ((a, b), c) = head goodOp in return (c:a, True)
+              else return (goodOp, True)
+
+            {- let goodOp = filter (snd . fst) r -}
+            {- if null goodOp -}
+              {- then return ([], False) -}
+              {- else let ((a, b), c) = head goodOp in return (c:a, True) -}
+
+findFirstGoodOp :: [St (([Operation], Bool), Operation)] -> St [Operation]
+findFirstGoodOp [] = return []
+findFirstGoodOp (r:remains) = do
+    ((a, b), c) <- r
+    if b then return (c:a) else findFirstGoodOp remains
 
 -- debug only
 dfs_ :: S.HashSet Board -> Board -> IO Bool
@@ -301,8 +315,6 @@ dfs_ vis bd = do
             return $ or allResult
 
 -- currently bfs fails to solve most of the games
-type St = State (S.HashSet Board)
-
 bfs' :: Sq.Seq Board -> St Bool
 bfs' q = case Sq.viewl q of
             Sq.EmptyL -> return False
@@ -348,3 +360,74 @@ simplify' bds (bo:bos) ops =
                   pickb = bds !! idx
                   Just newOp = lookup pickb bo
                 in newOp : drop idx ops
+
+expand :: [(Board, [Operation])] -> [(Board, [Operation])]
+expand = concatMap $ \(b, op) ->
+    let bs = allPossibleMoves b
+    in map (\(b', op') -> (b', op ++ [op'])) bs
+
+simplify3 :: Board -> [Operation] -> [Operation]
+simplify3 bd ops =
+    let allboard = scanl modifyBoard bd ops
+        allboard_e = zip allboard [0..]
+        possibleBoards = map allPossibleMoves allboard
+        possibleBoards2 = map helper possibleBoards
+        helper :: [(Board, Operation)] -> [(Board, [Operation])]
+        helper = concatMap $ \(b, op) ->
+            let bs = allPossibleMoves b
+            in map (\(b', op') -> (b', [op, op'])) bs
+        possibleBoards3 = map expand possibleBoards2
+        newops = simplify3' allboard possibleBoards3 ops
+    in if length ops == length newops
+         then ops
+         else simplify3 bd newops
+
+simplify3' :: [Board] -> [[(Board, [Operation])]] -> [Operation] ->
+    [Operation]
+simplify3' [] _ ops = ops
+simplify3' _ [] ops = ops
+simplify3' _ _ [] = []
+simplify3' bds (bo:bos) ops =
+    let bds' = zip bds [0..]
+        sb = S.fromList $ map fst bo
+        r = map (first (`S.member` sb)) $ drop 4 bds'
+        rr = filter fst r
+    in if null rr
+         then head ops : simplify3' (tail bds) bos (tail ops)
+         else let idx = snd . head $ rr
+                  pickb = bds !! idx
+                  Just newOp = lookup pickb bo
+                in newOp ++ drop idx ops
+
+simplify5 :: Board -> [Operation] -> [Operation]
+simplify5 bd ops =
+    let allboard = scanl modifyBoard bd ops
+        allboard_e = zip allboard [0..]
+        possibleBoards = map allPossibleMoves allboard
+        possibleBoards2 = map helper possibleBoards
+        helper :: [(Board, Operation)] -> [(Board, [Operation])]
+        helper = concatMap $ \(b, op) ->
+            let bs = allPossibleMoves b
+            in map (\(b', op') -> (b', [op, op'])) bs
+        possibleBoards3 = map (expand . expand . expand) possibleBoards2
+        newops = simplify5' allboard possibleBoards3 ops
+    in if length ops == length newops
+         then ops
+         else simplify5 bd newops
+
+simplify5' :: [Board] -> [[(Board, [Operation])]] -> [Operation] ->
+    [Operation]
+simplify5' [] _ ops = ops
+simplify5' _ [] ops = ops
+simplify5' _ _ [] = []
+simplify5' bds (bo:bos) ops =
+    let bds' = zip bds [0..]
+        sb = S.fromList $ map fst bo
+        r = map (first (`S.member` sb)) $ drop 6 bds'
+        rr = filter fst r
+    in if null rr
+         then head ops : simplify3' (tail bds) bos (tail ops)
+         else let idx = snd . head $ rr
+                  pickb = bds !! idx
+                  Just newOp = lookup pickb bo
+                in newOp ++ drop idx ops
